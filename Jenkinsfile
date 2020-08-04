@@ -11,6 +11,9 @@ properties([
 
         stringParam(name: 'WEBRTC_VERSION', defaultValue: "4147",
             description: 'WebRTC version to build (check https://chromiumdash.appspot.com/releases)')
+
+        booleanParam(name: 'REBUILD_LINUX_DOCKER', defaultValue: false,
+            description: 'Force to rebuild Docker container for Linux and Android builds.'),
     ])
 ])
 
@@ -40,13 +43,14 @@ node('master') {
 // --------------------------------------------------------------------------
 def nodes = [:]
 
-nodes['macos'] = build_unix('build-os-x')
+nodes['macos'] = build_macos('build-os-x')
+nodes['linux'] = build_linux('build-docker')
 
 stage('Build') {
     parallel(nodes)
 }
 
-def build_unix(slave) {
+def build_macos(slave) {
     return { node(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
@@ -170,6 +174,34 @@ def build_unix(slave) {
                         archiveArtifacts artifacts: 'package/**', fingerprint: true
                     }
                 }
+            }
+        }
+    }}
+}
+
+def build_linux(slave) {
+    return { node(slave) {
+        def jobPath = pathFromJobName(env.JOB_NAME)
+
+        ws("workspace/${jobPath}") {
+            dir('scripts') {
+                deleteDir()
+                unstash 'src'
+                sh 'ls -l'
+            }
+
+            def buildContainerName = 'virgil-linux-webrtc:0.1.0'
+            def buildContainer = docker.image(buildContainerName)
+            if (!buildContainer || params.REBUILD_LINUX_DOCKER) {
+                stage('Build Linux Docker image.') {
+                    dir('scripts') {
+                        buildContainer = docker.builds buildContainerName
+                    }
+                }
+            }
+
+            buildContainer.inside {
+                sh 'lsb_release'
             }
         }
     }}
