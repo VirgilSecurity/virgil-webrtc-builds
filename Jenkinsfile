@@ -191,13 +191,16 @@ def build_linux(slave) {
             }
 
             def buildContainerName = 'virgil-linux-webrtc:0.1.0'
-            def buildContainer = docker.image(buildContainerName)
-            if (!buildContainer || params.REBUILD_LINUX_DOCKER) {
+            def buildContainerHash = sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
+            def buildContainer = null
+            if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
                 stage('Build Linux Docker image.') {
                     dir('scripts') {
                         buildContainer = docker.builds buildContainerName
                     }
                 }
+            } else {
+                buildContainer = docker.image(buildContainerName)
             }
 
             buildContainer.inside {
