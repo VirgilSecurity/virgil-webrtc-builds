@@ -9,6 +9,9 @@ properties([
         booleanParam(name: 'CLEAN_BUILD', defaultValue: false,
             description: 'Remove all fetched toolchains.'),
 
+        booleanParam(name: 'SKIP_BUILD_MACOS', defaultValue: false,
+            description: 'Skip MacOS builds.'),
+
         stringParam(name: 'WEBRTC_VERSION', defaultValue: "4147",
             description: 'WebRTC version to build (check https://chromiumdash.appspot.com/releases)'),
 
@@ -53,6 +56,11 @@ stage('Build') {
 def build_macos(slave) {
     return { node(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
+
+        if (params.SKIP_BUILD_MACOS) {
+            echo "MacOS builds are skipped."
+            return
+        }
 
         ws("workspace/${jobPath}") {
             dir('scripts') {
@@ -203,8 +211,12 @@ def build_linux(slave) {
                 buildContainer = docker.image(buildContainerName)
             }
 
-            buildContainer.inside {
-                sh 'lsb_release'
+            dir('temp') {
+                buildContainer.inside {
+                    sh 'lsb_release > test.txt'
+                }
+
+                sh 'cat test.txt'
             }
         }
     }}
