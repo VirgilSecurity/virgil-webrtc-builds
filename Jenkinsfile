@@ -10,7 +10,7 @@ properties([
             description: 'Remove all fetched toolchains.'),
 
         stringParam(name: 'WEBRTC_VERSION', defaultValue: "4147",
-            description: 'WebRTC version to build (check https://chromiumdash.appspot.com/releases)')
+            description: 'WebRTC version to build (check https://chromiumdash.appspot.com/releases)'),
 
         booleanParam(name: 'REBUILD_LINUX_DOCKER', defaultValue: false,
             description: 'Force to rebuild Docker container for Linux and Android builds.'),
