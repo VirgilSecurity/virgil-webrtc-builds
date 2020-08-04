@@ -196,27 +196,26 @@ def build_linux(slave) {
                 deleteDir()
                 unstash 'src'
                 sh 'ls -l'
-            }
 
-            def buildContainerName = 'virgil-linux-webrtc:0.1.0'
-            def buildContainerHash = sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
-            def buildContainer = null
-            if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
-                stage('Build Linux Docker image.') {
-                    dir('scripts') {
-                        buildContainer = docker.builds buildContainerName
+                dir('linux_android') {
+                    def buildContainerName = 'virgil-linux-webrtc:0.1.0'
+                    def buildContainerHash = sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
+                    def buildContainer = null
+                    if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
+                        stage('Build Linux Docker image.') {
+                            buildContainer = docker.builds buildContainerName
+                        }
+                    } else {
+                        buildContainer = docker.image(buildContainerName)
                     }
-                }
-            } else {
-                buildContainer = docker.image(buildContainerName)
-            }
 
-            dir('temp') {
-                buildContainer.inside {
-                    sh 'lsb_release > test.txt'
-                }
+                    buildContainer.inside {
+                        sh 'lsb_release > test.txt'
+                    }
 
-                sh 'cat test.txt'
+                    sh 'ls -l'
+                    sh 'cat test.txt'
+                }
             }
         }
     }}
