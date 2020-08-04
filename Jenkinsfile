@@ -203,7 +203,7 @@ def build_linux(slave) {
                     def buildContainer = null
                     if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
                         stage('Build Linux Docker image.') {
-                            buildContainer = docker.builds buildContainerName
+                            buildContainer = docker.build(buildContainerName)
                         }
                     } else {
                         buildContainer = docker.image(buildContainerName)
