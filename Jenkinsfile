@@ -21,6 +21,19 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
+// --------------------------------------------------------------------------
+//  Grab SCM
+// --------------------------------------------------------------------------
+node('master') {
+    stage('Grab SCM') {
+        env
+        echo "PARAMETERS:"
+        echo "CLEAN_BUILD = ${params.CLEAN_BUILD}"
+        echo "WEBRTC_VERSION = ${params.WEBRTC_VERSION}"
+        checkout scm
+        stash includes: '**', name: 'src'
+    }
+}
 
 // --------------------------------------------------------------------------
 //  Build
@@ -37,11 +50,13 @@ def build_unix(slave) {
     return { node(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
-        echo "PARAMETERS:"
-        echo "CLEAN_BUILD = ${params.CLEAN_BUILD}"
-        echo "WEBRTC_VERSION = ${params.WEBRTC_VERSION}"
-
         ws("workspace/${jobPath}") {
+            dir('scripts') {
+                deleteDir()
+                unstash 'src'
+                sh 'ls -l'
+            }
+
             stage('Cleanup') {
                 if (params.CLEAN_BUILD) {
                     deleteDir()
