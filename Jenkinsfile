@@ -151,31 +151,31 @@ def inner_build_unix(webrtc, platform, archs) {
                             flattenFiles: false,
                             includes: '**/*.h',
                             targetLocation: "package/${platform}/include/webrtc"
-                        ),
-
-                        archs.each { arch ->
-                            fileCopyOperation(
-                                flattenFiles: true,
-                                renameFiles: true,
-                                includes: "out/Debug/${arch}/obj/libwebrtc.a",
-                                targetLocation: "package/${platform}/${arch}/lib",
-                                sourceCaptureExpression: /(libwebrtc)\.a/,
-                                targetNameExpression: '$1_d.a'
-                            ),
-
-                            fileCopyOperation(
-                                flattenFiles: true,
-                                includes: "out/Release/${arch}/obj/libwebrtc.a",
-                                targetLocation: "package/${platform}/${arch}/lib"
-                            ),
-
-                            fileCopyOperation(
-                                flattenFiles: true,
-                                includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
-                                targetLocation: "package/${platform}/${arch}/lib"
-                            )
-                        }
+                        )
                     ])
+
+                    archs.each { arch ->
+                        fileOperations([fileCopyOperation(
+                            flattenFiles: true,
+                            renameFiles: true,
+                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/${arch}/lib",
+                            sourceCaptureExpression: /(libwebrtc)\.a/,
+                            targetNameExpression: '$1_d.a'
+                        )])
+
+                        fileOperations([fileCopyOperation(
+                            flattenFiles: true,
+                            includes: "out/Release/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/${arch}/lib"
+                        )])
+
+                        fileOperations([fileCopyOperation(
+                            flattenFiles: true,
+                            includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
+                            targetLocation: "package/${platform}/${arch}/lib"
+                        )])
+                    }
 
                     archiveArtifacts artifacts: 'package/**', fingerprint: true
                 }
