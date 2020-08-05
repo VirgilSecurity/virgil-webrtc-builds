@@ -85,6 +85,11 @@ def inner_build_unix(webrtc, platform, archs) {
 
         def rootDir = pwd()
         withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
+            if (fileExists('/.dockerenv')) {
+                // Workaround the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
+                sh "echo export PATH=${rootDir}/depot_tools:$PATH"
+            }
+
             sh 'echo ${PATH}'
 
             stage("Fetch sources") {
