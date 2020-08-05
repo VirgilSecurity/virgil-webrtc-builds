@@ -97,7 +97,7 @@ def inner_build_unix(webrtc, platform, archs) {
 
         env.PATH = "${rootDir}/depot_tools:${env.PATH}"
 
-        sh '----------'
+        sh 'echo ----------'
         sh 'echo ${PATH}'
 
         envSh(envPath, "echo $PATH")
