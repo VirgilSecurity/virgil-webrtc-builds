@@ -27,6 +27,10 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
+def envSh(env, command) {
+    sh "${env} ${command}"
+}
+
 // --------------------------------------------------------------------------
 //  Grab SCM
 // --------------------------------------------------------------------------
@@ -84,106 +88,103 @@ def inner_build_unix(webrtc, platform, archs) {
         }
 
         def rootDir = pwd()
-        withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
-            if (fileExists('/.dockerenv')) {
-                // Workaround the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
-                sh "echo export PATH=\\\"${rootDir}/depot_tools:$PATH\\\" >> ~/.bashrc"
+
+        // withEnv() can not be used due to the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
+        def envPath = "PATH=${rootDir}/depot_tools:$PATH"
+
+        envSh(envPath, "echo $PATH")
+
+        stage("Fetch sources") {
+            if (params.CLEAN_BUILD || !fileExists('src')) {
+                envSh(envPath, "fetch --nohooks ${webrtc}")
+            } else {
+                echo "Cached sources are used."
             }
+        }
 
-            sh 'echo ${PATH}'
-
-            stage("Fetch sources") {
-                if (params.CLEAN_BUILD || !fileExists('src')) {
-                    sh "fetch --nohooks ${webrtc}"
-                } else {
-                    echo "Cached sources are used."
-                }
-            }
-
-            stage("Sync") {
-                if (params.CLEAN_BUILD) {
-                    dir('src') {
-                        sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
-                        sh 'gclient sync'
-                    }
-                } else {
-                    echo "Sync sources were skipped."
-                }
-            }
-
-            dir("out") {
-                deleteDir()
-            }
-
-            stage("Compile") {
+        stage("Sync") {
+            if (params.CLEAN_BUILD) {
                 dir('src') {
-                    def args = ""
-                    args += "target_os = \"${platform}\"\n"
-                    args += 'use_custom_libcxx = false\n'
+                    envSh(envPath, "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}")
+                    envSh(envPath, 'gclient sync')
+                }
+            } else {
+                echo "Sync sources were skipped."
+            }
+        }
 
-                    archs.each { arch ->
-                        args += "target_cpu = \"${arch}\"\n"
+        dir("out") {
+            deleteDir()
+        }
 
-                        dir("out/Release/${arch}") {
-                            args += 'is_debug = false\n'
-                            writeFile(file: "args.gn", text: args)
-                        }
+        stage("Compile") {
+            dir('src') {
+                def args = ""
+                args += "target_os = \"${platform}\"\n"
+                args += 'use_custom_libcxx = false\n'
 
-                        dir("out/Debug/${arch}") {
-                            args += 'is_debug = true\n'
-                            writeFile(file: "args.gn", text: args)
-                        }
+                archs.each { arch ->
+                    args += "target_cpu = \"${arch}\"\n"
 
-                        sh """
-                            gn gen 'out/Release/${arch}'
-                            ninja -C 'out/Release/${arch}''
-
-                            gn gen 'out/Debug/${arch}'
-                            ninja -C 'out/Debug/${arch}'
-                        """
+                    dir("out/Release/${arch}") {
+                        args += 'is_debug = false\n'
+                        writeFile(file: "args.gn", text: args)
                     }
+
+                    dir("out/Debug/${arch}") {
+                        args += 'is_debug = true\n'
+                        writeFile(file: "args.gn", text: args)
+                    }
+
+                    envSh(envPath, """
+                        gn gen 'out/Release/${arch}'
+                        ninja -C 'out/Release/${arch}'
+
+                        gn gen 'out/Debug/${arch}'
+                        ninja -C 'out/Debug/${arch}'
+                    """
                 }
             }
+        }
 
-            stage("Package") {
-                dir('src') {
-                    dir('package/${platform}') {
-                        deleteDir()
-                    }
-
-                    fileOperations([
-                        fileCopyOperation(
-                            flattenFiles: false,
-                            includes: '**/*.h',
-                            targetLocation: "package/${platform}/include/webrtc"
-                        )
-                    ])
-
-                    archs.each { arch ->
-                        fileOperations([fileCopyOperation(
-                            flattenFiles: true,
-                            renameFiles: true,
-                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/${arch}/lib",
-                            sourceCaptureExpression: /(libwebrtc)\.a/,
-                            targetNameExpression: '$1_d.a'
-                        )])
-
-                        fileOperations([fileCopyOperation(
-                            flattenFiles: true,
-                            includes: "out/Release/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/${arch}/lib"
-                        )])
-
-                        fileOperations([fileCopyOperation(
-                            flattenFiles: true,
-                            includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
-                            targetLocation: "package/${platform}/${arch}/lib"
-                        )])
-                    }
-
-                    archiveArtifacts artifacts: 'package/**', fingerprint: true
+        stage("Package") {
+            dir('src') {
+                dir('package/${platform}') {
+                    deleteDir()
                 }
+
+                fileOperations([
+                    fileCopyOperation(
+                        flattenFiles: false,
+                        includes: '**/*.h',
+                        targetLocation: "package/${platform}/include/webrtc"
+                    )
+                ])
+
+                archs.each { arch ->
+                    fileOperations([fileCopyOperation(
+                        flattenFiles: true,
+                        renameFiles: true,
+                        includes: "out/Debug/${arch}/obj/libwebrtc.a",
+                        targetLocation: "package/${platform}/${arch}/lib",
+                        sourceCaptureExpression: /(libwebrtc)\.a/,
+                        targetNameExpression: '$1_d.a'
+                    )])
+
+                    fileOperations([fileCopyOperation(
+                        flattenFiles: true,
+                        includes: "out/Release/${arch}/obj/libwebrtc.a",
+                        targetLocation: "package/${platform}/${arch}/lib"
+                    )])
+
+                    fileOperations([fileCopyOperation(
+                        flattenFiles: true,
+                        includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
+                        targetLocation: "package/${platform}/${arch}/lib"
+                    )])
+                }
+
+                archiveArtifacts artifacts: 'package/**', fingerprint: true
             }
         }
     }
