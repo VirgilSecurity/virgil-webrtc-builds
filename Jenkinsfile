@@ -47,175 +47,184 @@ node('master') {
 def nodes = [:]
 
 nodes['macos'] = build_macos('build-os-x')
-nodes['linux'] = build_linux('build-docker')
+nodes['linux_android'] = build_linux_android('build-docker')
+
 
 stage('Build') {
     parallel(nodes)
 }
 
-def build_macos(slave) {
-    return { node(slave) {
-        def jobPath = pathFromJobName(env.JOB_NAME)
 
-        if (params.SKIP_BUILD_MACOS) {
-            echo "MacOS builds are skipped."
-            return
+def inner_build_unix(webrtc, platform, archs) {
+    dir('scripts') {
+        deleteDir()
+        unstash 'src'
+    }
+
+    dir("build/${platform}") {
+        stage('Cleanup') {
+            if (params.CLEAN_BUILD) {
+                deleteDir()
+            } else {
+                echo "Cleanup was skipped."
+            }
         }
 
-        ws("workspace/${jobPath}") {
-            dir('scripts') {
-                deleteDir()
-                unstash 'src'
-                sh 'ls -l'
-            }
-
-            stage('Cleanup') {
+        stage('Fetch tools') {
+            dir('depot_tools') {
                 if (params.CLEAN_BUILD) {
-                    deleteDir()
+                    checkout([
+                        $class: 'GitSCM',
+                        userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
+                    ])
                 } else {
-                    echo "Cleanup was skipped."
+                    echo "Cached depot_tools are used."
+                }
+            }
+        }
+
+        def rootDir = pwd()
+        withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
+            stage("Fetch sources") {
+                if (params.CLEAN_BUILD) {
+                    sh "fetch --nohooks ${webrtc}"
+                } else {
+                    echo "Cached sources are used."
                 }
             }
 
-            stage('Fetch tools') {
-                dir('depot_tools') {
-                    if (params.CLEAN_BUILD) {
-                        checkout([
-                            $class: 'GitSCM',
-                            userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
-                        ])
-                    } else {
-                        echo "Cached depot_tools are used."
-                    }
-                }
-            }
-
-            def rootDir = pwd()
-            withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
-                stage("Fetch sources") {
-                    if (params.CLEAN_BUILD) {
-                        sh "fetch --nohooks webrtc"
-                    } else {
-                        echo "Cached sources are used."
-                    }
-                }
-
-                stage("Sync") {
-                    if (params.CLEAN_BUILD) {
-                        dir('src') {
-                            sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
-                            sh 'gclient sync'
-                        }
-                    } else {
-                        echo "Sync sources were skipped."
-                    }
-                }
-
-                dir("out") {
-                    deleteDir()
-                }
-
-                stage("Compile") {
+            stage("Sync") {
+                if (params.CLEAN_BUILD) {
                     dir('src') {
-                        def args = ""
-                        // args += 'target_os = "mac"\n'
-                        args += 'use_custom_libcxx = false\n'
-                        args += 'target_cpu = "x64"\n'
+                        sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
+                        sh 'gclient sync'
+                    }
+                } else {
+                    echo "Sync sources were skipped."
+                }
+            }
 
-                        dir('out/Release') {
+            dir("out") {
+                deleteDir()
+            }
+
+            stage("Compile") {
+                dir('src') {
+                    def args = ""
+                    args += "target_os = \"${platform}\"\n"
+                    args += 'use_custom_libcxx = false\n'
+
+                    for(String arch: archs) {
+                        args += "target_cpu = \"${arch}\"\n"
+
+                        dir("out/Release/${arch}") {
                             args += 'is_debug = false\n'
                             writeFile(file: "args.gn", text: args)
                         }
 
                         sh """
-                            gn gen 'out/Release'
-                            ninja -C 'out/Release'
+                            gn gen "out/Release/${arch}"
+                            ninja -C "out/Release/${arch}"
                         """
 
-                        dir('out/Debug') {
+                        dir("out/Debug/${arch}") {
                             args += 'is_debug = true\n'
                             writeFile(file: "args.gn", text: args)
                         }
 
                         sh """
-                            gn gen 'out/Debug'
-                            ninja -C 'out/Debug'
+                            gn gen "out/Debug/${arch}"
+                            ninja -C "out/Debug/${arch}"
                         """
                     }
                 }
+            }
 
-                stage("Package") {
-                    dir('src') {
-                        dir('package') {
-                            deleteDir()
-                        }
+            stage("Package") {
+                dir('src') {
+                    dir('package/${platform}') {
+                        deleteDir()
+                    }
 
-                        fileOperations([
-                            fileCopyOperation(
-                                flattenFiles: false,
-                                includes: '**/*.h',
-                                targetLocation: "package/include/webrtc"
-                            ),
+                    fileOperations([
+                        fileCopyOperation(
+                            flattenFiles: false,
+                            includes: '**/*.h',
+                            targetLocation: "package/${platform}/include/webrtc"
+                        ),
 
+                        for(String arch: archs) {
                             fileCopyOperation(
                                 flattenFiles: true,
                                 renameFiles: true,
-                                includes: 'out/Debug/obj/libwebrtc.a',
-                                targetLocation: "package/lib",
+                                includes: "out/Debug/${arch}/obj/libwebrtc.a",
+                                targetLocation: "package/${platform}/${arch}/lib",
                                 sourceCaptureExpression: /(libwebrtc)\.a/,
                                 targetNameExpression: '$1_d.a'
                             ),
 
                             fileCopyOperation(
                                 flattenFiles: true,
-                                includes: 'out/Release/obj/libwebrtc.a',
-                                targetLocation: "package/lib"
+                                includes: "out/Release/${arch}/obj/libwebrtc.a",
+                                targetLocation: "package/${platform}/${arch}/lib"
                             ),
 
                             fileCopyOperation(
                                 flattenFiles: true,
-                                includes: 'out/Debug/obj/libwebrtc_d.a',
-                                targetLocation: "package/lib"
+                                includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
+                                targetLocation: "package/${platform}/${arch}/lib"
                             )
-                        ])
+                        }
+                    ])
 
-                        archiveArtifacts artifacts: 'package/**', fingerprint: true
-                    }
+                    archiveArtifacts artifacts: 'package/**', fingerprint: true
                 }
             }
+        }
+    }
+}
+
+def build_macos(slave) {
+    return { node(slave) {
+        def jobPath = pathFromJobName(env.JOB_NAME)
+        ws("workspace/${jobPath}") {
+            if (params.SKIP_BUILD_MACOS) {
+                echo "MacOS builds are skipped."
+                return
+            }
+
+            inner_build_unix("webrtc", "mac", ["x64"])
         }
     }}
 }
 
-def build_linux(slave) {
+def build_linux_android(slave) {
     return { node(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
+            def buildContainerName = 'virgil-linux-webrtc:0.1.0'
+
             dir('scripts') {
                 deleteDir()
                 unstash 'src'
-                sh 'ls -l'
 
                 dir('linux_android') {
-                    def buildContainerName = 'virgil-linux-webrtc:0.1.0'
                     def buildContainerHash = sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
-                    def buildContainer = null
+
                     if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
                         stage('Build Linux Docker image.') {
-                            buildContainer = docker.build(buildContainerName)
+                            docker.build(buildContainerName)
                         }
-                    } else {
-                        buildContainer = docker.image(buildContainerName)
                     }
-
-                    buildContainer.inside {
-                        sh 'lsb_release > test.txt'
-                    }
-
-                    sh 'ls -l'
-                    sh 'cat test.txt'
                 }
+            }
+
+            def buildContainer = docker.image(buildContainerName)
+
+            buildContainer.inside {
+                inner_build_unix("webrtc", "linux", ["x64"])
+                inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
             }
         }
     }}
