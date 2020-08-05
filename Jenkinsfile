@@ -124,17 +124,15 @@ def inner_build_unix(webrtc, platform, archs) {
                             writeFile(file: "args.gn", text: args)
                         }
 
-                        sh """
-                            gn gen "out/Release/${arch}"
-                            ninja -C "out/Release/${arch}"
-                        """
-
                         dir("out/Debug/${arch}") {
                             args += 'is_debug = true\n'
                             writeFile(file: "args.gn", text: args)
                         }
 
                         sh """
+                            gn gen "out/Release/${arch}"
+                            ninja -C "out/Release/${arch}"
+
                             gn gen "out/Debug/${arch}"
                             ninja -C "out/Debug/${arch}"
                         """
