@@ -142,7 +142,7 @@ def inner_build_unix(webrtc, platform, archs) {
 
                         gn gen 'out/Debug/${arch}'
                         ninja -C 'out/Debug/${arch}'
-                    """
+                    """)
                 }
             }
         }
