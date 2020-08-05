@@ -130,11 +130,11 @@ def inner_build_unix(webrtc, platform, archs) {
                         }
 
                         sh """
-                            gn gen "out/Release/${arch}"
-                            ninja -C "out/Release/${arch}"
+                            gn gen 'out/Release/${arch}'
+                            ninja -C 'out/Release/${arch}''
 
-                            gn gen "out/Debug/${arch}"
-                            ninja -C "out/Debug/${arch}"
+                            gn gen 'out/Debug/${arch}'
+                            ninja -C 'out/Debug/${arch}'
                         """
                     }
                 }
