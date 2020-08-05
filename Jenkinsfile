@@ -72,7 +72,7 @@ def inner_build_unix(webrtc, platform, archs) {
 
         stage('Fetch tools') {
             dir('depot_tools') {
-                if (params.CLEAN_BUILD) {
+                if (params.CLEAN_BUILD || !fileExists('depot_tools/')) {
                     checkout([
                         $class: 'GitSCM',
                         userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
@@ -86,7 +86,7 @@ def inner_build_unix(webrtc, platform, archs) {
         def rootDir = pwd()
         withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
             stage("Fetch sources") {
-                if (params.CLEAN_BUILD) {
+                if (params.CLEAN_BUILD || !fileExists('src')) {
                     sh "fetch --nohooks ${webrtc}"
                 } else {
                     echo "Cached sources are used."
