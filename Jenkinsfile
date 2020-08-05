@@ -90,7 +90,7 @@ def inner_build_unix(webrtc, platform, archs) {
         def rootDir = pwd()
 
         // withEnv() can not be used due to the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
-        def envPath = "PATH=${rootDir}/depot_tools:$PATH"
+        def envPath = "\\\"PATH=${rootDir}/depot_tools:$PATH\\\""
 
         envSh(envPath, "echo $PATH")
 
