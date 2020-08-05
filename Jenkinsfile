@@ -7,10 +7,16 @@
 properties([
     parameters([
         booleanParam(name: 'CLEAN_BUILD', defaultValue: false,
-            description: 'Remove all fetched toolchains.'),
+            description: 'Remove all fetched toolchains and build directories.'),
 
         booleanParam(name: 'SKIP_BUILD_MACOS', defaultValue: false,
             description: 'Skip MacOS builds.'),
+
+        booleanParam(name: 'SKIP_BUILD_LINUX', defaultValue: false,
+            description: 'Skip Linux builds.'),
+
+        booleanParam(name: 'SKIP_ANDROID_LINUX', defaultValue: false,
+            description: 'Skip Android builds.'),
 
         booleanParam(name: 'REBUILD_LINUX_DOCKER', defaultValue: false,
             description: 'Force to rebuild Docker container for Linux and Android builds.'),
@@ -192,7 +198,9 @@ def inner_build_unix(webrtc, platform, archs) {
                     )])
                 }
 
-                archiveArtifacts artifacts: 'package/**', fingerprint: true
+                dir('package') {
+                    archiveArtifacts artifacts: "${platform}/**", fingerprint: true
+                }
             }
         }
     }
@@ -240,11 +248,19 @@ def build_linux_android(slave) {
 
             buildContainer.inside {
                 stage('Build for Linux') {
-                    inner_build_unix("webrtc", "linux", ["x64"])
+                    if (!params.SKIP_BUILD_LINUX) {
+                        inner_build_unix("webrtc", "linux", ["x64"])
+                    } else {
+                        echo "Linux builds are skipped."
+                    }
                 }
 
                 stage('Build for Android') {
-                    inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
+                    if (!params.SKIP_BUILD_ANDROID) {
+                        inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
+                    } else {
+                        echo "Android builds are skipped."
+                    }
                 }
             }
         }
