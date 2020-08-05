@@ -114,7 +114,7 @@ def inner_build_unix(webrtc, platform, archs) {
                     args += "target_os = \"${platform}\"\n"
                     args += 'use_custom_libcxx = false\n'
 
-                    for(String arch: archs) {
+                    archs.each { arch ->
                         args += "target_cpu = \"${arch}\"\n"
 
                         dir("out/Release/${arch}") {
@@ -153,7 +153,7 @@ def inner_build_unix(webrtc, platform, archs) {
                             targetLocation: "package/${platform}/include/webrtc"
                         ),
 
-                        for(String arch: archs) {
+                        archs.each { arch ->
                             fileCopyOperation(
                                 flattenFiles: true,
                                 renameFiles: true,
