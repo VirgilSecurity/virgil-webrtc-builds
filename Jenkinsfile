@@ -85,6 +85,8 @@ def inner_build_unix(webrtc, platform, archs) {
 
         def rootDir = pwd()
         withEnv(["PATH+DEPOT_TOOLS=${rootDir}/depot_tools"]) {
+            sh 'echo ${PATH}'
+
             stage("Fetch sources") {
                 if (params.CLEAN_BUILD || !fileExists('src')) {
                     sh "fetch --nohooks ${webrtc}"
