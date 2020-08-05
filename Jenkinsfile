@@ -207,7 +207,9 @@ def build_macos(slave) {
                 return
             }
 
-            inner_build_unix("webrtc", "mac", ["x64"])
+            stage('Build for MacOS') {
+                inner_build_unix("webrtc", "mac", ["x64"])
+            }
         }
     }}
 }
@@ -237,8 +239,13 @@ def build_linux_android(slave) {
             def buildContainer = docker.image(buildContainerName)
 
             buildContainer.inside {
-                inner_build_unix("webrtc", "linux", ["x64"])
-                inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
+                stage('Build for Linux') {
+                    inner_build_unix("webrtc", "linux", ["x64"])
+                }
+
+                stage('Build for Android') {
+                    inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
+                }
             }
         }
     }}
