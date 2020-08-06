@@ -240,8 +240,6 @@ def build_linux_android(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
-            deleteDir()
-
             def toolsPath = fetchWebRtcTools()
 
             def buildContainerName = 'virgil-linux-webrtc:0.1.0'
