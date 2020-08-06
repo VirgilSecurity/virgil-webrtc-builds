@@ -9,6 +9,9 @@ properties([
         booleanParam(name: 'CLEAN_BUILD', defaultValue: false,
             description: 'Remove all fetched toolchains and build directories.'),
 
+        booleanParam(name: 'CLEAN_WEBRTC_TOOLS', defaultValue: false,
+            description: 'Remove fetch a new WebRTC Depot Tools.'),
+
         booleanParam(name: 'SKIP_BUILD_MACOS', defaultValue: false,
             description: 'Skip MacOS builds.'),
 
@@ -77,7 +80,7 @@ stage('Build') {
 def fetchWebRtcTools() {
     stage('Fetch tools') {
         dir('depot_tools') {
-            if (params.CLEAN_BUILD || !fileExists('.git')) {
+            if (params.CLEAN_BUILD || params.CLEAN_WEBRTC_TOOLS || !fileExists('.git')) {
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
@@ -214,6 +217,7 @@ def inner_build_unix(webrtc, platform, archs) {
 def build_macos(slave) {
     return { node(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
+
         ws("workspace/${jobPath}") {
             if (params.SKIP_BUILD_MACOS) {
                 echo "MacOS builds are skipped."
@@ -236,6 +240,8 @@ def build_linux_android(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
+            deleteDir()
+
             def toolsPath = fetchWebRtcTools()
 
             def buildContainerName = 'virgil-linux-webrtc:0.1.0'
