@@ -124,7 +124,7 @@ def inner_build_unix(webrtc, platform, archs) {
 
         stage("Sync") {
             def isSyncRequired = !fileExists(webRtcVersionFile) || (readFile(file: webRtcVersionFile).trim() != params.WEBRTC_VERSION)
-            if (params.CLEAN_BUILD || resyncRequired) {
+            if (params.CLEAN_BUILD || isSyncRequired) {
                 dir('src') {
                     sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
                     sh 'gclient sync'
