@@ -4,12 +4,12 @@ MAINTAINER Virgil Security Inc. <support@virgilsecurity.com>
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN addgroup tomcat
-RUN adduser tomcat --ingroup tomcat
+RUN adduser -D tomcat --ingroup tomcat
 RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN chmod -R g+rwx /var/cache/debconf
+RUN chmod -R g+rwx /var/cache
 
 USER tomcat:tomcat
 
