@@ -17,6 +17,7 @@ RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
 
 RUN addgroup tomcat
 RUN adduser tomcat --ingroup tomcat
+RUN usermod -aG sudo tomcat
 USER tomcat
 
 #
