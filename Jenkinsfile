@@ -77,7 +77,7 @@ stage('Build') {
 def fetchWebRtcTools() {
     stage('Fetch tools') {
         dir('depot_tools') {
-            if (params.CLEAN_BUILD || !fileExists('depot_tools/.git')) {
+            if (params.CLEAN_BUILD || !fileExists('.git')) {
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
