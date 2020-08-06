@@ -262,7 +262,7 @@ def build_linux_android(slave) {
                 buildContainer = docker.build('virgil-linux-webrtc-tmp')
             }
 
-            buildContainer.inside {
+            buildContainer.inside("--user root") {
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
                         inner_build_unix("webrtc", "linux", ["x64"])
