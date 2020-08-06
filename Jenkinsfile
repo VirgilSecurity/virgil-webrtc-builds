@@ -18,7 +18,7 @@ properties([
         booleanParam(name: 'SKIP_BUILD_LINUX', defaultValue: false,
             description: 'Skip Linux builds.'),
 
-        booleanParam(name: 'SKIP_ANDROID_LINUX', defaultValue: false,
+        booleanParam(name: 'SKIP_BUILD_ANDROID', defaultValue: false,
             description: 'Skip Android builds.'),
 
         booleanParam(name: 'REBUILD_LINUX_DOCKER', defaultValue: false,
