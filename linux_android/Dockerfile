@@ -3,16 +3,6 @@ MAINTAINER Virgil Security Inc. <support@virgilsecurity.com>
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN addgroup tomcat
-RUN adduser tomcat --gecos "X X,X,X,X" --ingroup tomcat --disabled-password
-RUN usermod -aG sudo tomcat
-RUN usermod -aG root tomcat
-RUN usermod -gu 0 -o tomcat
-#RUN mkdir -p /etc/sudoers.d
-#RUN echo '%tomcat ALL=(ALL) ALL' > /etc/sudoers.d/tomcat
-
-USER tomcat:tomcat
-
 # Set the locale
 RUN apt-get clean
 RUN apt-get -y update
@@ -26,7 +16,6 @@ ENV LC_ALL en_US.UTF-8
 RUN apt-get update -qq
 RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
 
-
 #
 #  WebRTC dependencies.
 #
@@ -38,3 +27,13 @@ RUN chmod +x ./install-build-deps-android.sh
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 RUN ./install-build-deps.sh --no-chromeos-fonts
 RUN ./install-build-deps-android.sh
+
+#
+# Add user tomcat:tomcat
+#
+RUN addgroup tomcat
+RUN adduser tomcat --gecos "X X,X,X,X" --ingroup tomcat --disabled-password
+RUN usermod -aG sudo tomcat
+RUN usermod -aG root tomcat
+
+USER tomcat:tomcat
