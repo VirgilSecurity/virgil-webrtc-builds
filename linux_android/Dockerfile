@@ -20,10 +20,10 @@ RUN adduser tomcat --ingroup tomcat
 RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-RUN whoami
+
+RUN chmod -R g+rwx /
 
 USER tomcat:tomcat
-RUN whoami
 
 #
 #  WebRTC dependencies.
@@ -33,6 +33,6 @@ RUN curl https://chromium.googlesource.com/chromium/src/+/master/build/install-b
 RUN curl https://chromium.googlesource.com/chromium/src/+/master/build/install-build-deps.sh?format=TEXT | base64 -d > install-build-deps.sh
 RUN chmod +x ./install-build-deps.sh
 RUN chmod +x ./install-build-deps-android.sh
-RUN sudo echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 RUN ./install-build-deps.sh --no-chromeos-fonts
 RUN ./install-build-deps-android.sh
