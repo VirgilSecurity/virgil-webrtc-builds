@@ -7,8 +7,9 @@ RUN addgroup tomcat
 RUN adduser tomcat --gecos "X X,X,X,X" --ingroup tomcat --disabled-password
 RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
-RUN mkdir -p /etc/sudoers.d
-RUN echo '%tomcat ALL=(ALL) ALL' > /etc/sudoers.d/tomcat
+RUN usermod -g 0 -o tomcat
+#RUN mkdir -p /etc/sudoers.d
+#RUN echo '%tomcat ALL=(ALL) ALL' > /etc/sudoers.d/tomcat
 
 USER tomcat:tomcat
 
