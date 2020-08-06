@@ -264,6 +264,7 @@ def build_linux_android(slave) {
             dir('docker') {
                 writeFile(file: 'Dockerfile', text: formatLeft("""
                     FROM ${buildContainerName}
+                    USER tomcat:tomcat
                     ENV PATH=\"${toolsPath}:\${PATH}\"
                 """
                 ))
