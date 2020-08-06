@@ -33,11 +33,16 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
-def envSh(envFile, command) {
-    sh """
-        source ${envFile}
-        ${command}
-    """
+def formatLeft(str) {
+    def res = ""
+
+    str.eachLine { line, count ->
+        res += line.trim() + System.lineSeparator()
+    }
+
+    echo res
+
+    return res
 }
 
 // --------------------------------------------------------------------------
@@ -68,6 +73,23 @@ stage('Build') {
 }
 
 
+def fetchWebRtcTools() {
+    stage('Fetch tools') {
+        dir('depot_tools') {
+            if (params.CLEAN_BUILD || !fileExists('depot_tools/')) {
+                checkout([
+                    $class: 'GitSCM',
+                    userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
+                ])
+            } else {
+                echo "Cached depot_tools are used."
+            }
+        }
+    }
+
+    return pwd() + '/depot_tools'
+}
+
 def inner_build_unix(webrtc, platform, archs) {
     dir('scripts') {
         deleteDir()
@@ -75,6 +97,8 @@ def inner_build_unix(webrtc, platform, archs) {
     }
 
     dir("build/${platform}") {
+        sh 'echo ${PATH}'
+
         stage('Cleanup') {
             if (params.CLEAN_BUILD) {
                 deleteDir()
@@ -82,29 +106,6 @@ def inner_build_unix(webrtc, platform, archs) {
                 echo "Cleanup was skipped."
             }
         }
-
-        stage('Fetch tools') {
-            dir('depot_tools') {
-                if (params.CLEAN_BUILD || !fileExists('depot_tools/')) {
-                    checkout([
-                        $class: 'GitSCM',
-                        userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
-                    ])
-                } else {
-                    echo "Cached depot_tools are used."
-                }
-            }
-        }
-
-        def rootDir = pwd()
-
-        // withEnv() can not be used due to the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
-        def envPath = "export PATH=${rootDir}/depot_tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        def envFile = "${rootDir}/env.sh"
-        writeFile(file: envFile, text: envPath)
-
-        sh "cat ${envFile}"
-        envSh(envFile, "echo $PATH")
 
         stage("Fetch sources") {
             if (params.CLEAN_BUILD || !fileExists('src')) {
@@ -213,8 +214,12 @@ def build_macos(slave) {
                 return
             }
 
+            def toolsPath = fetchWebRtcTools()
+
             stage('Build for MacOS') {
-                inner_build_unix("webrtc", "mac", ["x64"])
+                withEnv("PATH+WEBRTC_TOOLS=${toolsPath}") {
+                    inner_build_unix("webrtc", "mac", ["x64"])
+                }
             }
         }
     }}
@@ -225,24 +230,35 @@ def build_linux_android(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
+            def toolsPath = fetchWebRtcTools()
+
             def buildContainerName = 'virgil-linux-webrtc:0.1.0'
 
-            dir('scripts') {
-                deleteDir()
-                unstash 'src'
+            stage('Build Linux Docker image.') {
+                dir('scripts') {
+                    deleteDir()
+                    unstash 'src'
 
-                dir('linux_android') {
-                    def buildContainerHash = sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
+                    dir('linux_android') {
+                        def buildContainerHash =
+                                sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
 
-                    if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
-                        stage('Build Linux Docker image.') {
+                        if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
                             docker.build(buildContainerName)
                         }
                     }
                 }
             }
 
-            def buildContainer = docker.image(buildContainerName)
+            dir('docker') {
+                writeFile(file: 'Dockerfile', text: formatLeft("""
+                    FROM ${buildContainerName}
+                    ENV PATH=\"${toolsPath}:\${PATH}\"
+                """
+                ))
+
+                def buildContainer = docker.build('virgil-linux-webrtc-tmp')
+            }
 
             buildContainer.inside {
                 stage('Build for Linux') {
