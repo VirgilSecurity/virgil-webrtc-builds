@@ -15,8 +15,8 @@ ENV LC_ALL en_US.UTF-8
 RUN apt-get update -qq
 RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
 
-RUN adduser -DU tomcat
-RUN usermod -aG sudo tomcat
+RUN addgroup tomcat
+RUN adduser tomcat --ingroup tomcat
 USER tomcat
 
 #
