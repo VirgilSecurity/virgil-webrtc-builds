@@ -199,7 +199,7 @@ def inner_build_unix(webrtc, platform, archs) {
                 }
 
                 dir('package') {
-                    archiveArtifacts artifacts: "${platform}/**", fingerprint: true
+                    archiveArtifacts artifacts: "${platform}/**", fingerprint: false
                 }
             }
         }
@@ -251,6 +251,7 @@ def build_linux_android(slave) {
                 }
             }
 
+            def buildContainer = null
             dir('docker') {
                 writeFile(file: 'Dockerfile', text: formatLeft("""
                     FROM ${buildContainerName}
@@ -258,7 +259,7 @@ def build_linux_android(slave) {
                 """
                 ))
 
-                def buildContainer = docker.build('virgil-linux-webrtc-tmp')
+                buildContainer = docker.build('virgil-linux-webrtc-tmp')
             }
 
             buildContainer.inside {
