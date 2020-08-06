@@ -35,7 +35,8 @@ def pathFromJobName(jobName) {
 
 def envSh(envFile, command) {
     sh """
-        source ${envFile} && ${command}
+        source ${envFile}
+        ${command}
     """
 }
 
@@ -102,7 +103,7 @@ def inner_build_unix(webrtc, platform, archs) {
         def envFile = "${rootDir}/env.sh"
         writeFile(file: envFile, text: envPath)
 
-        sh 'echo ======='
+        sh "cat ${envFile}"
         envSh(envFile, "echo $PATH")
 
         stage("Fetch sources") {
