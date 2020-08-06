@@ -100,7 +100,7 @@ def inner_build_unix(webrtc, platform, archs) {
         // withEnv() can not be used due to the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
         def envPath = "export PATH=${rootDir}/depot_tools:$PATH"
         def envFile = "${rootDir}/env.sh"
-        writeFile(envFile, envPath)
+        writeFile(file: envFile, text: envPath)
 
         sh 'echo ======='
         envSh(envFile, "echo $PATH")
