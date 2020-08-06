@@ -1,9 +1,7 @@
 FROM ubuntu:18.04
 MAINTAINER Virgil Security Inc. <support@virgilsecurity.com>
 
-RUN adduser -U tomcat
-RUN usermod -aG sudo tomcat
-USER tomcat
+USER tomcat:tomcat
 
 ARG DEBIAN_FRONTEND=noninteractive
 
