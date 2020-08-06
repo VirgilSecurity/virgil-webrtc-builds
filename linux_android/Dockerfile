@@ -23,6 +23,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN whoami
 
 USER tomcat:tomcat
+RUN whoami
 
 #
 #  WebRTC dependencies.
