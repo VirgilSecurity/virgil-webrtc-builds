@@ -38,7 +38,7 @@ def formatLeft(String str) {
     def res = ""
 
     str.eachLine { line, count ->
-        res += line.trim() + System.lineSeparator()
+        res += line.trim() + '\n'
     }
 
     echo res
