@@ -19,6 +19,8 @@ RUN addgroup tomcat
 RUN adduser tomcat --ingroup tomcat
 RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
 USER tomcat:tomcat
 
 #
