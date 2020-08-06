@@ -33,6 +33,7 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
+@NonCPS
 def formatLeft(String str) {
     def res = ""
 
