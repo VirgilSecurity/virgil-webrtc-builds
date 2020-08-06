@@ -217,7 +217,7 @@ def build_macos(slave) {
             def toolsPath = fetchWebRtcTools()
 
             stage('Build for MacOS') {
-                withEnv("PATH+WEBRTC_TOOLS=${toolsPath}") {
+                withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
                     inner_build_unix("webrtc", "mac", ["x64"])
                 }
             }
