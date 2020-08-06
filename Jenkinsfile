@@ -33,10 +33,9 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
-def envSh(env, command) {
+def envSh(envFile, command) {
     sh """
-        export ${env}
-        ${command}
+        source ${envFile} && ${command}
     """
 }
 
@@ -99,22 +98,16 @@ def inner_build_unix(webrtc, platform, archs) {
         def rootDir = pwd()
 
         // withEnv() can not be used due to the bug: https://issues.jenkins-ci.org/browse/JENKINS-49076
-        def envPath = "PATH=${rootDir}/depot_tools:$PATH"
+        def envPath = "export PATH=${rootDir}/depot_tools:$PATH"
+        def envFile = "${rootDir}/env.sh"
+        writeFile(envFile, envPath)
 
-        sh "echo /////  ${rootDir}/depot_tools"
-
-        // env.PATH = "${rootDir}/depot_tools:${env.PATH}"
-
-        sh 'echo 1:----------'
-        sh 'echo ${PATH}'
-        sh 'echo 2:----------'
-        sh 'echo $PATH'
-
-        envSh(envPath, "echo $PATH")
+        sh 'echo ======='
+        envSh(envFile, "echo $PATH")
 
         stage("Fetch sources") {
             if (params.CLEAN_BUILD || !fileExists('src')) {
-                envSh(envPath, "fetch --nohooks ${webrtc}")
+                envSh(envFile, "fetch --nohooks ${webrtc}")
             } else {
                 echo "Cached sources are used."
             }
@@ -123,8 +116,8 @@ def inner_build_unix(webrtc, platform, archs) {
         stage("Sync") {
             if (params.CLEAN_BUILD) {
                 dir('src') {
-                    envSh(envPath, "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}")
-                    envSh(envPath, 'gclient sync')
+                    envSh(envFile, "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}")
+                    envSh(envFile, 'gclient sync')
                 }
             } else {
                 echo "Sync sources were skipped."
@@ -154,7 +147,7 @@ def inner_build_unix(webrtc, platform, archs) {
                         writeFile(file: "args.gn", text: args)
                     }
 
-                    envSh(envPath, """
+                    envSh(envFile, """
                         gn gen 'out/Release/${arch}'
                         ninja -C 'out/Release/${arch}'
 
