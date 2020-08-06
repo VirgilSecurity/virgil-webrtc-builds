@@ -1,8 +1,6 @@
 FROM ubuntu:18.04
 MAINTAINER Virgil Security Inc. <support@virgilsecurity.com>
 
-USER tomcat:tomcat
-
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Set the locale
@@ -16,6 +14,10 @@ ENV LC_ALL en_US.UTF-8
 
 RUN apt-get update -qq
 RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
+
+RUN adduser -DU tomcat
+RUN usermod -aG sudo tomcat
+USER tomcat
 
 #
 #  WebRTC dependencies.
