@@ -33,7 +33,7 @@ def pathFromJobName(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
-def formatLeft(str) {
+def formatLeft(String str) {
     def res = ""
 
     str.eachLine { line, count ->
@@ -109,7 +109,7 @@ def inner_build_unix(webrtc, platform, archs) {
 
         stage("Fetch sources") {
             if (params.CLEAN_BUILD || !fileExists('src')) {
-                envSh(envFile, "fetch --nohooks ${webrtc}")
+                sh "fetch --nohooks ${webrtc}"
             } else {
                 echo "Cached sources are used."
             }
@@ -118,8 +118,8 @@ def inner_build_unix(webrtc, platform, archs) {
         stage("Sync") {
             if (params.CLEAN_BUILD) {
                 dir('src') {
-                    envSh(envFile, "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}")
-                    envSh(envFile, 'gclient sync')
+                    sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
+                    sh 'gclient sync'
                 }
             } else {
                 echo "Sync sources were skipped."
@@ -149,7 +149,7 @@ def inner_build_unix(webrtc, platform, archs) {
                         writeFile(file: "args.gn", text: args)
                     }
 
-                    envSh(envFile, """
+                    sh """
                         gn gen 'out/Release/${arch}'
                         ninja -C 'out/Release/${arch}'
 
