@@ -108,7 +108,7 @@ def inner_build_unix(webrtc, platform, archs) {
         sh 'echo ----------'
         sh 'echo ${PATH}'
         sh 'echo ----------'
-        sh 'echo $PATH'
+        sh 'echo \$PATH'
 
         envSh(envPath, "echo $PATH")
 
