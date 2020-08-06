@@ -3,6 +3,16 @@ MAINTAINER Virgil Security Inc. <support@virgilsecurity.com>
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+RUN addgroup tomcat
+RUN adduser tomcat --ingroup tomcat
+RUN usermod -aG sudo tomcat
+RUN usermod -aG root tomcat
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN chmod -R g+rwx /var/cache/debconf
+
+USER tomcat:tomcat
+
 # Set the locale
 RUN apt-get clean
 RUN apt-get -y update
@@ -12,18 +22,10 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
+
 RUN apt-get update -qq
 RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
 
-RUN addgroup tomcat
-RUN adduser tomcat --ingroup tomcat
-RUN usermod -aG sudo tomcat
-RUN usermod -aG root tomcat
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-RUN chmod -R g+rwx /
-
-USER tomcat:tomcat
 
 #
 #  WebRTC dependencies.
