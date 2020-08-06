@@ -77,7 +77,8 @@ stage('Build') {
 def fetchWebRtcTools() {
     stage('Fetch tools') {
         dir('depot_tools') {
-            if (params.CLEAN_BUILD || !fileExists('depot_tools/')) {
+            if (params.CLEAN_BUILD || !fileExists('depot_tools/.git')) {
+                deleteDir()
                 checkout([
                     $class: 'GitSCM',
                     userRemoteConfigs: [[url: 'https://chromium.googlesource.com/chromium/tools/depot_tools.git']]
@@ -100,6 +101,8 @@ def inner_build_unix(webrtc, platform, archs) {
     dir("build/${platform}") {
         sh 'echo ${PATH}'
 
+        def webRtcVersionFile = pwd() + '/WEBRTC_VERSION'
+
         stage('Cleanup') {
             if (params.CLEAN_BUILD) {
                 deleteDir()
@@ -117,10 +120,12 @@ def inner_build_unix(webrtc, platform, archs) {
         }
 
         stage("Sync") {
-            if (params.CLEAN_BUILD) {
+            def isSyncRequired = !fileExists(webRtcVersionFile) || (readFile(file: webRtcVersionFile).trim() != params.WEBRTC_VERSION)
+            if (params.CLEAN_BUILD || resyncRequired) {
                 dir('src') {
                     sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
                     sh 'gclient sync'
+                    writeFile(file: webRtcVersionFile, text: params.WEBRTC_VERSION)
                 }
             } else {
                 echo "Sync sources were skipped."
