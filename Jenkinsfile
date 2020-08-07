@@ -235,7 +235,7 @@ def build_macos(slave) {
                 stage('Build for iOS') {
                     if (!params.SKIP_BUILD_IOS) {
                         inner_build_unix(
-                                "webrtc_ios", "ios", ["arm", "arm64", "x86", "x64"],
+                                "webrtc_ios", "ios", ["arm64", "x64"],
                                 ["enable_ios_bitcode=true", "use_xcode_clang=true", "ios_enable_code_signing=false"]
                         )
                     } else {
@@ -265,7 +265,7 @@ def build_linux_android(slave) {
 
                 stage('Build for Android') {
                     if (!params.SKIP_BUILD_ANDROID) {
-                        inner_build_unix("webrtc_android", "android", ["arm", "arm64", "x86", "x64"])
+                        inner_build_unix("webrtc_android", "android", ["arm64", "x64"])
                     } else {
                         echo "Android builds are skipped."
                     }
