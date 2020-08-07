@@ -25,8 +25,7 @@ RUN curl https://chromium.googlesource.com/chromium/src/+/master/build/install-b
 RUN chmod +x ./install-build-deps.sh
 RUN chmod +x ./install-build-deps-android.sh
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN ./install-build-deps.sh --no-chromeos-fonts
-RUN ./install-build-deps-android.sh
+RUN echo 'tomcat ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 #
 # Add user tomcat:tomcat
@@ -37,3 +36,7 @@ RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
 
 USER tomcat:tomcat
+
+RUN ./install-build-deps.sh --no-chromeos-fonts
+RUN ./install-build-deps-android.sh
+
