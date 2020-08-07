@@ -32,16 +32,12 @@ RUN ./install-build-deps-android.sh
 # Add user tomcat:tomcat
 #
 RUN addgroup tomcat
-RUN adduser tomcat --gecos "X X,X,X,X" --ingroup tomcat --disabled-password
+#RUN adduser tomcat --gecos "X X,X,X,X" --ingroup tomcat --disabled-password
+RUN useradd -m -k /etc/skel -s /bin/bash -u 0 -o -g root tomcat
 RUN usermod -aG sudo tomcat
 RUN usermod -aG root tomcat
+RUN usermod -aG tomcat tomcat
 RUN echo 'tomcat ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-# Magic
-RUN mkdir /.vpython-root
-RUN chown tomcat:tomcat /.vpython-root
 
 USER tomcat:tomcat
 WORKDIR /home/tomcat
-
-
