@@ -162,11 +162,20 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
 
                     sh """
                         gn gen 'out/Release/${arch}'
-                        ninja -C 'out/Release/${arch}'
-
                         gn gen 'out/Debug/${arch}'
-                        ninja -C 'out/Debug/${arch}'
                     """
+
+                    if (platform == "ios") {
+                        sh """
+                            ninja -C 'out/Release/${arch}' ios_framework_bundle
+                            ninja -C 'out/Debug/${arch}' ios_framework_bundle
+                        """
+                    } else {
+                        sh """
+                            ninja -C 'out/Release/${arch}'
+                            ninja -C 'out/Debug/${arch}'
+                        """
+                    }
                 }
             }
         }
