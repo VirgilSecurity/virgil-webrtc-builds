@@ -274,6 +274,7 @@ def build_linux_android(slave) {
 
             buildContainer.inside() {
                 sh 'whoami'
+                sh 'id'
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
                         inner_build_unix("webrtc", "linux", ["x64"])
