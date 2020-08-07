@@ -32,12 +32,12 @@ properties([
 // --------------------------------------------------------------------------
 //  Helper functions
 // --------------------------------------------------------------------------
-def pathFromJobName(jobName) {
+def path_from_job_name(jobName) {
     return jobName.replace('/','-').replace('%2f', '-').replace('%2F', '-')
 }
 
 @NonCPS
-def formatLeft(String str) {
+def format_left(String str) {
     def res = ""
 
     str.eachLine { line, count ->
@@ -75,7 +75,7 @@ stage('Build') {
     parallel(nodes)
 }
 
-def fetchWebRtcTools() {
+def fetch_webrtc_tools() {
     stage('Fetch tools') {
         dir('depot_tools') {
             if (params.CLEAN_BUILD || params.CLEAN_WEBRTC_TOOLS || !fileExists('.git')) {
@@ -218,10 +218,10 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
 
 def build_macos(slave) {
     return { node(slave) {
-        def jobPath = pathFromJobName(env.JOB_NAME)
+        def jobPath = path_from_job_name(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
-            def toolsPath = fetchWebRtcTools()
+            def toolsPath = fetch_webrtc_tools()
 
             withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
                 stage('Build for MacOS') {
@@ -236,7 +236,7 @@ def build_macos(slave) {
                     if (!params.SKIP_BUILD_IOS) {
                         inner_build_unix(
                                 "webrtc_ios", "ios", ["arm", "arm64", "x86", "x64"],
-                                ["enable_ios_bitcode=true", "use_xcode_clang=true"]
+                                ["enable_ios_bitcode=true", "use_xcode_clang=true", "ios_enable_code_signing=false"]
                         )
                     } else {
                         echo "Android builds are skipped."
@@ -249,10 +249,10 @@ def build_macos(slave) {
 
 def build_linux_android(slave) {
     return { node(slave) {
-        def jobPath = pathFromJobName(env.JOB_NAME)
+        def jobPath = path_from_job_name(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
-            def toolsPath = fetchWebRtcTools()
+            def toolsPath = fetch_webrtc_tools()
 
             withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
                 stage('Build for Linux') {
