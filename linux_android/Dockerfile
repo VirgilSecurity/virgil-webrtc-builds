@@ -19,7 +19,6 @@ RUN apt-get install -qq sudo curl git python lbzip2 lsb-release dialog apt-utils
 #
 #  WebRTC dependencies.
 #
-WORKDIR /tmp
 RUN curl https://chromium.googlesource.com/chromium/src/+/master/build/install-build-deps-android.sh?format=TEXT | base64 -d > install-build-deps-android.sh
 RUN curl https://chromium.googlesource.com/chromium/src/+/master/build/install-build-deps.sh?format=TEXT | base64 -d > install-build-deps.sh
 RUN chmod +x ./install-build-deps.sh

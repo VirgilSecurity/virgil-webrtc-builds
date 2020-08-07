@@ -271,7 +271,7 @@ def build_linux_android(slave) {
                 buildContainer = docker.build('virgil-linux-webrtc-tmp')
             }
 
-            buildContainer.inside("--user root") {
+            buildContainer.inside('-v /etc/passwd:/etc/passwd') {
                 sh 'whoami'
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
