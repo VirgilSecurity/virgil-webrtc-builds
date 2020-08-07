@@ -69,7 +69,7 @@ node('master') {
 def nodes = [:]
 
 nodes['macos'] = build_macos('build-os-x')
-nodes['linux_android'] = build_linux_android('build-docker')
+nodes['linux_android'] = build_linux_android('build-ubuntu20')
 
 
 stage('Build') {
@@ -242,37 +242,7 @@ def build_linux_android(slave) {
         ws("workspace/${jobPath}") {
             def toolsPath = fetchWebRtcTools()
 
-            def buildContainerName = 'virgil-linux-webrtc:0.1.0'
-
-            stage('Build Linux Docker image.') {
-                dir('scripts') {
-                    deleteDir()
-                    unstash 'src'
-
-                    dir('linux_android') {
-                        def buildContainerHash =
-                                sh(returnStdout: true, script: "docker images -q ${buildContainerName}").trim()
-
-                        if (!buildContainerHash || params.REBUILD_LINUX_DOCKER) {
-                            docker.build(buildContainerName)
-                        }
-                    }
-                }
-            }
-
-            def buildContainer = null
-            dir('docker') {
-                writeFile(file: 'Dockerfile', text: formatLeft("""
-                    FROM ${buildContainerName}
-                    ENV PATH=\"${toolsPath}:\${PATH}\"
-                """
-                ))
-
-                buildContainer = docker.build('virgil-linux-webrtc-tmp')
-            }
-
-            buildContainer.inside('-v /etc/passwd:/etc/passwd') {
-                sh 'whoami'
+            withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
                         inner_build_unix("webrtc", "linux", ["x64"])
