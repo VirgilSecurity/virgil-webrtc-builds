@@ -264,7 +264,6 @@ def build_linux_android(slave) {
             dir('docker') {
                 writeFile(file: 'Dockerfile', text: formatLeft("""
                     FROM ${buildContainerName}
-                    USER tomcat:tomcat
                     ENV PATH=\"${toolsPath}:\${PATH}\"
                 """
                 ))
@@ -272,9 +271,7 @@ def build_linux_android(slave) {
                 buildContainer = docker.build('virgil-linux-webrtc-tmp')
             }
 
-            buildContainer.inside() {
-                sh 'whoami'
-                sh 'id'
+            buildContainer.inside {
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
                         inner_build_unix("webrtc", "linux", ["x64"])
