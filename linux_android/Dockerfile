@@ -40,3 +40,4 @@ USER tomcat:tomcat
 RUN ./install-build-deps.sh --no-chromeos-fonts
 RUN ./install-build-deps-android.sh
 
+WORKDIR /home/tomcat
