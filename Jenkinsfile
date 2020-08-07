@@ -15,14 +15,14 @@ properties([
         booleanParam(name: 'SKIP_BUILD_MACOS', defaultValue: false,
             description: 'Skip MacOS builds.'),
 
+        booleanParam(name: 'SKIP_BUILD_IOS', defaultValue: false,
+            description: 'Skip iOS builds.'),
+
         booleanParam(name: 'SKIP_BUILD_LINUX', defaultValue: false,
             description: 'Skip Linux builds.'),
 
         booleanParam(name: 'SKIP_BUILD_ANDROID', defaultValue: false,
             description: 'Skip Android builds.'),
-
-        booleanParam(name: 'REBUILD_LINUX_DOCKER', defaultValue: false,
-            description: 'Force to rebuild Docker container for Linux and Android builds.'),
 
         stringParam(name: 'WEBRTC_VERSION', defaultValue: "4147",
             description: 'WebRTC version to build (check https://chromiumdash.appspot.com/releases)'),
@@ -71,11 +71,9 @@ def nodes = [:]
 nodes['macos'] = build_macos('build-os-x')
 nodes['linux_android'] = build_linux_android('build-ubuntu20')
 
-
 stage('Build') {
     parallel(nodes)
 }
-
 
 def fetchWebRtcTools() {
     stage('Fetch tools') {
@@ -95,7 +93,7 @@ def fetchWebRtcTools() {
     return pwd() + '/depot_tools'
 }
 
-def inner_build_unix(webrtc, platform, archs) {
+def inner_build_unix(webrtc, platform, archs, options = []) {
     dir('scripts') {
         deleteDir()
         unstash 'src'
@@ -144,6 +142,10 @@ def inner_build_unix(webrtc, platform, archs) {
                 def args = ""
                 args += "target_os = \"${platform}\"\n"
                 args += 'use_custom_libcxx = false\n'
+
+                options.each { option ->
+                    args += "${option}\n"
+                }
 
                 archs.each { arch ->
                     args += "target_cpu = \"${arch}\"\n"
@@ -219,16 +221,32 @@ def build_macos(slave) {
         def jobPath = pathFromJobName(env.JOB_NAME)
 
         ws("workspace/${jobPath}") {
-            if (params.SKIP_BUILD_MACOS) {
-                echo "MacOS builds are skipped."
-                return
-            }
-
             def toolsPath = fetchWebRtcTools()
 
             stage('Build for MacOS') {
                 withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
                     inner_build_unix("webrtc", "mac", ["x64"])
+                }
+            }
+
+            withEnv(["PATH+WEBRTC_TOOLS=${toolsPath}"]) {
+                stage('Build for MacOS') {
+                    if (!params.SKIP_BUILD_MACOS) {
+                        inner_build_unix("webrtc", "mac", ["x64"])
+                    } else {
+                        echo "MacOS builds are skipped."
+                    }
+                }
+
+                stage('Build for iOS') {
+                    if (!params.SKIP_BUILD_IOS) {
+                        inner_build_unix(
+                                "webrtc_ios", "ios", ["arm", "arm64", "x86", "x64"],
+                                ["enable_ios_bitcode=true", "use_xcode_clang=true"]
+                        )
+                    } else {
+                        echo "Android builds are skipped."
+                    }
                 }
             }
         }
