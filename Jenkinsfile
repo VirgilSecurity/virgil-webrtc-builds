@@ -214,22 +214,34 @@ def inner_pack_unix(platform) {
             //  Pack Release libraries.
             //
             if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
-                sh "cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a"
+                sh """
+                    mkdir -p package/${platform}/lib/x86
+                    cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a
+                """
             }
 
             if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
-                sh "cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a"
+                sh """
+                    mkdir -p package/${platform}/lib/x86_64
+                    cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a
+                """
             }
 
             //
             //  Pack Debug libraries.
             //
             if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
-                sh "cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a"
+                sh """
+                    mkdir -p package/${platform}/lib/x86
+                    cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a
+                """
             }
 
             if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
-                sh "cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a"
+                sh """
+                    mkdir -p package/${platform}/lib/x86_64
+                    cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a
+                """
             }
 
             //
