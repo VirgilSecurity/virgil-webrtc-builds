@@ -6,11 +6,14 @@
 // --------------------------------------------------------------------------
 properties([
     parameters([
-        booleanParam(name: 'CLEAN_BUILD', defaultValue: false,
-            description: 'Remove all fetched toolchains and build directories.'),
-
         booleanParam(name: 'CLEAN_WEBRTC_TOOLS', defaultValue: false,
-            description: 'Remove fetch a new WebRTC Depot Tools.'),
+            description: 'Fetch a new WebRTC Depot Tools.'),
+
+        booleanParam(name: 'CLEAN_WEBRTC_SOURCES', defaultValue: false,
+            description: 'Fetch a new WebRTC sources.'),
+
+        booleanParam(name: 'CLEAN_BUILD', defaultValue: false,
+            description: 'Remove build directories.'),
 
         booleanParam(name: 'SKIP_BUILD_MACOS', defaultValue: false,
             description: 'Skip MacOS builds.'),
@@ -55,9 +58,17 @@ def format_left(String str) {
 node('master') {
     stage('Grab SCM') {
         env
-        echo "PARAMETERS:"
+        echo "=== PARAMETERS: ==="
+        echo "CLEAN_WEBRTC_TOOLS = ${params.CLEAN_WEBRTC_TOOLS}"
+        echo "CLEAN_WEBRTC_SOURCES = ${params.CLEAN_WEBRTC_SOURCES}"
         echo "CLEAN_BUILD = ${params.CLEAN_BUILD}"
+        echo "SKIP_BUILD_MACOS = ${params.SKIP_BUILD_MACOS}"
+        echo "SKIP_BUILD_IOS = ${params.SKIP_BUILD_IOS}"
+        echo "SKIP_BUILD_LINUX = ${params.SKIP_BUILD_LINUX}"
+        echo "SKIP_BUILD_ANDROID = ${params.SKIP_BUILD_ANDROID}"
         echo "WEBRTC_VERSION = ${params.WEBRTC_VERSION}"
+        echo "==="
+
         checkout scm
         stash includes: '**', name: 'src'
     }
@@ -78,7 +89,7 @@ stage('Build') {
 def fetch_webrtc_tools() {
     stage('Fetch tools') {
         dir('depot_tools') {
-            if (params.CLEAN_BUILD || params.CLEAN_WEBRTC_TOOLS || !fileExists('.git')) {
+            if (params.CLEAN_WEBRTC_TOOLS || !fileExists('.git')) {
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
@@ -104,16 +115,14 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
 
         def webRtcVersionFile = pwd() + '/WEBRTC_VERSION'
 
-        stage('Cleanup') {
-            if (params.CLEAN_BUILD) {
-                deleteDir()
-            } else {
-                echo "Cleanup was skipped."
-            }
-        }
-
         stage("Fetch sources") {
-            if (params.CLEAN_BUILD || !fileExists('src')) {
+            if (params.CLEAN_WEBRTC_SOURCES) {
+                dir('src') {
+                    deleteDir()
+                }
+            }
+
+            if (params.CLEAN_WEBRTC_SOURCES || !fileExists('src')) {
                 sh "fetch --nohooks ${webrtc}"
             } else {
                 echo "Cached sources are used."
@@ -121,8 +130,10 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
         }
 
         stage("Sync") {
-            def isSyncRequired = !fileExists(webRtcVersionFile) || (readFile(file: webRtcVersionFile).trim() != params.WEBRTC_VERSION)
-            if (params.CLEAN_BUILD || isSyncRequired) {
+            def isSyncRequired = !fileExists(webRtcVersionFile) ||
+                                 (readFile(file: webRtcVersionFile).trim() != params.WEBRTC_VERSION)
+
+            if (params.CLEAN_WEBRTC_SOURCES || isSyncRequired) {
                 dir('src') {
                     sh "git checkout refs/remotes/branch-heads/${params.WEBRTC_VERSION}"
                     sh 'gclient sync'
@@ -151,11 +162,19 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
                     args += "target_cpu = \"${arch}\"\n"
 
                     dir("out/Release/${arch}") {
+                        if (params.CLEAN_BUILD) {
+                            deleteDir()
+                        }
+
                         args += 'is_debug = false\n'
                         writeFile(file: "args.gn", text: args)
                     }
 
                     dir("out/Debug/${arch}") {
+                        if (params.CLEAN_BUILD) {
+                            deleteDir()
+                        }
+
                         args += 'is_debug = true\n'
                         writeFile(file: "args.gn", text: args)
                     }
@@ -170,47 +189,219 @@ def inner_build_unix(webrtc, platform, archs, options = []) {
                 }
             }
         }
+    }
+}
 
-        stage("Package") {
-            dir('src') {
-                dir('package/${platform}') {
-                    deleteDir()
-                }
+def inner_pack_unix(platform) {
+    stage("Pack/Archive") {
+        dir("build/${platform}/src") {
+            dir("package/${platform}") {
+                deleteDir()
+            }
 
-                fileOperations([
-                    fileCopyOperation(
-                        flattenFiles: false,
-                        includes: '**/*.h',
-                        targetLocation: "package/${platform}/include/webrtc"
-                    )
-                ])
+            //
+            //  Copy includes.
+            //
+            fileOperations([
+                fileCopyOperation(
+                    flattenFiles: false,
+                    includes: '**/*.h',
+                    targetLocation: "package/${platform}/include/webrtc"
+                )
+            ])
 
-                archs.each { arch ->
-                    fileOperations([fileCopyOperation(
-                        flattenFiles: true,
-                        renameFiles: true,
-                        includes: "out/Debug/${arch}/obj/libwebrtc.a",
-                        targetLocation: "package/${platform}/${arch}/lib",
-                        sourceCaptureExpression: /(libwebrtc)\.a/,
-                        targetNameExpression: '$1_d.a'
-                    )])
+            //
+            //  Pack Release libraries.
+            //
+            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
+                sh "cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a"
+            }
 
-                    fileOperations([fileCopyOperation(
-                        flattenFiles: true,
-                        includes: "out/Release/${arch}/obj/libwebrtc.a",
-                        targetLocation: "package/${platform}/${arch}/lib"
-                    )])
+            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
+                sh "cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a"
+            }
 
-                    fileOperations([fileCopyOperation(
-                        flattenFiles: true,
-                        includes: "out/Debug/${arch}/obj/libwebrtc_d.a",
-                        targetLocation: "package/${platform}/${arch}/lib"
-                    )])
-                }
+            //
+            //  Pack Debug libraries.
+            //
+            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
+                sh "cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a"
+            }
 
-                dir('package') {
-                    archiveArtifacts artifacts: "${platform}/**", fingerprint: false
-                }
+            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
+                sh "cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a"
+            }
+
+            //
+            //  Acrhive.
+            //
+            dir('package') {
+                archiveArtifacts artifacts: "${platform}/**", fingerprint: false
+            }
+        }
+    }
+}
+
+def inner_pack_macos_ios(platform) {
+    stage("Pack/Archive") {
+        dir("build/${platform}/src") {
+            dir("package/${platform}") {
+                deleteDir()
+            }
+
+            //
+            //  Copy includes.
+            //
+            fileOperations([
+                fileCopyOperation(
+                    flattenFiles: false,
+                    includes: '**/*.h',
+                    targetLocation: "package/${platform}/include/webrtc"
+                )
+            ])
+
+            //
+            //  Pack Release libraries.
+            //
+
+            sh "mkdir -p package/${platform}/lib"
+
+            def releaseLibs = ""
+            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
+                releaseLibs += " out/Release/x86/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
+                releaseLibs += " out/Release/x64/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Release/arm/obj/libwebrtc.a')) {
+                releaseLibs += " out/Release/arm/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Release/arm64/obj/libwebrtc.a')) {
+                releaseLibs += " out/Release/arm64/obj/libwebrtc.a"
+            }
+
+            sh "xcrun lipo -create ${releaseLibs} --output package/${platform}/lib/libwebrtc.a"
+
+            //
+            //  Pack Debug libraries.
+            //
+            def debugLibs = ""
+            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
+                debugLibs += " out/Debug/x86/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
+                debugLibs += " out/Debug/x64/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Debug/arm/obj/libwebrtc.a')) {
+                debugLibs += " out/Debug/arm/obj/libwebrtc.a"
+            }
+
+            if (fileExists('out/Debug/arm64/obj/libwebrtc.a')) {
+                debugLibs += " out/Debug/arm64/obj/libwebrtc.a"
+            }
+
+            sh "xcrun lipo -create ${debugLibs} --output package/${platform}/lib/libwebrtc_d.a"
+
+            //
+            //  Acrhive.
+            //
+            dir('package') {
+                archiveArtifacts artifacts: "${platform}/**", fingerprint: false
+            }
+        }
+    }
+}
+
+def inner_pack_android(platform) {
+    stage("Pack/Archive") {
+        dir("build/${platform}/src") {
+            dir("package/${platform}") {
+                deleteDir()
+            }
+
+            //
+            //  Copy includes.
+            //
+            fileOperations([
+                fileCopyOperation(
+                    flattenFiles: false,
+                    includes: '**/*.h',
+                    targetLocation: "package/${platform}/include/webrtc"
+                )
+            ])
+
+            //
+            //  Pack Release libraries.
+            //
+            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/x86
+                    cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a
+                """
+            }
+
+            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/x86_64
+                    cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a
+                """
+            }
+
+            if (fileExists('out/Release/arm/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/armeabi-v7a
+                    cp out/Release/arm/obj/libwebrtc.a package/${platform}/lib/armeabi-v7a/libwebrtc.a
+                """
+            }
+
+            if (fileExists('out/Release/arm64/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/arm64-v8a
+                    cp out/Release/arm64/obj/libwebrtc.a package/${platform}/lib/arm64-v8a/libwebrtc.a
+                """
+            }
+
+            //
+            //  Pack Debug libraries.
+            //
+            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/x86
+                    cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a
+                """
+            }
+
+            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/x86_64
+                    cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a
+                """
+            }
+
+            if (fileExists('out/Debug/arm/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/armeabi-v7a
+                    cp out/Debug/arm/obj/libwebrtc.a package/${platform}/lib/armeabi-v7a/libwebrtc_d.a
+                """
+            }
+
+            if (fileExists('out/Debug/arm64/obj/libwebrtc.a')) {
+                sh """
+                    mkdir -p package/${platform}/lib/arm64-v8a
+                    cp out/Debug/arm64/obj/libwebrtc.a package/${platform}/lib/arm64-v8a/libwebrtc_d.a
+                """
+            }
+
+            //
+            //  Acrhive.
+            //
+            dir('package') {
+                archiveArtifacts artifacts: "${platform}/**", fingerprint: false
             }
         }
     }
@@ -227,6 +418,7 @@ def build_macos(slave) {
                 stage('Build for MacOS') {
                     if (!params.SKIP_BUILD_MACOS) {
                         inner_build_unix("webrtc", "mac", ["x64"])
+                        inner_pack_macos_ios("mac")
                     } else {
                         echo "MacOS builds are skipped."
                     }
@@ -235,9 +427,10 @@ def build_macos(slave) {
                 stage('Build for iOS') {
                     if (!params.SKIP_BUILD_IOS) {
                         inner_build_unix(
-                                "webrtc_ios", "ios", ["arm64", "x64"],
+                                "webrtc_ios", "ios", ["arm", "x86", "arm64", "x64"],
                                 ["enable_ios_bitcode=true", "use_xcode_clang=true", "ios_enable_code_signing=false"]
                         )
+                        inner_pack_macos_ios("ios")
                     } else {
                         echo "Android builds are skipped."
                     }
@@ -258,6 +451,7 @@ def build_linux_android(slave) {
                 stage('Build for Linux') {
                     if (!params.SKIP_BUILD_LINUX) {
                         inner_build_unix("webrtc", "linux", ["x64"])
+                        inner_pack_unix("linux")
                     } else {
                         echo "Linux builds are skipped."
                     }
@@ -265,7 +459,8 @@ def build_linux_android(slave) {
 
                 stage('Build for Android') {
                     if (!params.SKIP_BUILD_ANDROID) {
-                        inner_build_unix("webrtc_android", "android", ["arm64", "x64"])
+                        inner_build_unix("webrtc_android", "android", ["arm", "x86", "arm64", "x64"])
+                        inner_pack_android("android")
                     } else {
                         echo "Android builds are skipped."
                     }
