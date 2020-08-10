@@ -283,7 +283,7 @@ def inner_pack_macos_ios(platform) {
                 releaseLibs += " out/Release/arm64/obj/libwebrtc.a"
             }
 
-            sh "xcrun lipo -create ${releaseLibs} --output package/${platform}/lib/libwebrtc.a"
+            sh "xcrun lipo -create ${releaseLibs} -output package/${platform}/lib/libwebrtc.a"
 
             //
             //  Pack Debug libraries.
@@ -305,7 +305,7 @@ def inner_pack_macos_ios(platform) {
                 debugLibs += " out/Debug/arm64/obj/libwebrtc.a"
             }
 
-            sh "xcrun lipo -create ${debugLibs} --output package/${platform}/lib/libwebrtc_d.a"
+            sh "xcrun lipo -create ${debugLibs} -output package/${platform}/lib/libwebrtc_d.a"
 
             //
             //  Acrhive.
