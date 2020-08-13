@@ -210,7 +210,7 @@ def inner_pack_unix(platform) {
                 )
             ])
 
-            ['x86', 'x86_64'].each { arch ->
+            ['x86', 'x64'].each { arch ->
                 //
                 //  Pack Release libraries.
                 //
@@ -318,7 +318,7 @@ def inner_pack_android(platform) {
                 )
             ])
 
-            ['arm', 'arm64', 'x86', 'x86_64'].each { arch ->
+            ['arm', 'arm64', 'x86', 'x64'].each { arch ->
                 //
                 //  Copy JARs.
                 //
