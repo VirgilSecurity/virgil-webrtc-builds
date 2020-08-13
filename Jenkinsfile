@@ -351,7 +351,7 @@ def inner_pack_android(platform) {
                 fileCopyOperation(
                     flattenFiles: true,
                     includes: "out/Release/${availableArch}/lib.java/**/*_java.jar",
-                    targetLocation: "package/${platform}/jvm/libs"
+                    targetLocation: "package/${platform}/jvm/libs",
                     excludes: "**/errorprone_plugin_java.jar"
                 )
             ])
