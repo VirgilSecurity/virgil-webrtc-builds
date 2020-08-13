@@ -215,24 +215,20 @@ def inner_pack_unix(platform) {
                 //  Pack Release libraries.
                 //
                 if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
-                    fileOperations([
-                        fileCopyOperation(
-                            includes: "out/Release/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc.a"
-                        )
-                    ])
+                    sh """
+                        mkdir -p package/${platform}/lib/${arch}
+                        cp out/Release/${arch}/obj/libwebrtc.a package/${platform}/lib/${arch}/libwebrtc.a
+                    """
                 }
 
                 //
                 //  Pack Debug libraries.
                 //
                 if (fileExists("out/Debug/${arch}/obj/libwebrtc.a")) {
-                    fileOperations([
-                        fileCopyOperation(
-                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc_d.a"
-                        )
-                    ])
+                    sh """
+                        mkdir -p package/${platform}/lib/${arch}
+                        cp out/Debug/${arch}/obj/libwebrtc.a package/${platform}/lib/${arch}/libwebrtc_d.a
+                    """
                 }
             }
 
@@ -334,24 +330,20 @@ def inner_pack_android(platform) {
                 //  Pack Release libraries.
                 //
                 if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
-                    fileOperations([
-                        fileCopyOperation(
-                            includes: "out/Release/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc.a"
-                        )
-                    ])
+                    sh """
+                        mkdir -p package/${platform}/lib/${arch}
+                        cp out/Release/${arch}/obj/libwebrtc.a package/${platform}/lib/${arch}/libwebrtc.a
+                    """
                 }
 
                 //
                 //  Pack Debug libraries.
                 //
                 if (fileExists("out/Debug/${arch}/obj/libwebrtc.a")) {
-                    fileOperations([
-                        fileCopyOperation(
-                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
-                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc_d.a"
-                        )
-                    ])
+                    sh """
+                        mkdir -p package/${platform}/lib/${arch}
+                        cp out/Debug/${arch}/obj/libwebrtc.a package/${platform}/lib/${arch}/libwebrtc_d.a
+                    """
                 }
             }
 
