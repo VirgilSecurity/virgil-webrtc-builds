@@ -270,7 +270,7 @@ def inner_pack_macos_ios(platform) {
             def releaseLibs = ""
             def debugLibs = ""
 
-            ['arm', 'arm64', 'x86', 'x86_64'].each { arch ->
+            ['arm', 'arm64', 'x86', 'x64'].each { arch ->
                 if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
                     releaseLibs += " out/Release/${arch}/obj/libwebrtc.a"
                 }
