@@ -314,18 +314,10 @@ def inner_pack_android(platform) {
                 )
             ])
 
+            //
+            //  Pack Release libraries.
+            //
             ['arm', 'arm64', 'x86', 'x64'].each { arch ->
-                //
-                //  Copy JARs.
-                //
-                fileOperations([
-                    fileCopyOperation(
-                        flattenFiles: true,
-                        includes: "out/Release/${arch}/lib.java/**/*_java.jar",
-                        targetLocation: "package/${platform}/lib/${arch}"
-                    )
-                ])
-
                 //
                 //  Pack Release libraries.
                 //
@@ -347,6 +339,21 @@ def inner_pack_android(platform) {
                 }
             }
 
+            //
+            //  Copy JARs.
+            //
+
+            def availableArch = ['arm', 'arm64', 'x86', 'x64'].find { arch ->
+                fileExists("out/Release/${arch}/")
+            }
+
+            fileOperations([
+                fileCopyOperation(
+                    flattenFiles: true,
+                    includes: "out/Release/${availableArch}/lib.java/**/*_java.jar",
+                    targetLocation: "package/${platform}/jvm/libs"
+                )
+            ])
 
             //
             //  Acrhive.
