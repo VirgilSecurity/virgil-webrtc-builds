@@ -210,38 +210,30 @@ def inner_pack_unix(platform) {
                 )
             ])
 
-            //
-            //  Pack Release libraries.
-            //
-            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86
-                    cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a
-                """
-            }
+            ['x86', 'x86_64'].each { arch ->
+                //
+                //  Pack Release libraries.
+                //
+                if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
+                    fileOperations([
+                        fileCopyOperation(
+                            includes: "out/Release/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc.a"
+                        )
+                    ])
+                }
 
-            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86_64
-                    cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a
-                """
-            }
-
-            //
-            //  Pack Debug libraries.
-            //
-            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86
-                    cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a
-                """
-            }
-
-            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86_64
-                    cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a
-                """
+                //
+                //  Pack Debug libraries.
+                //
+                if (fileExists("out/Debug/${arch}/obj/libwebrtc.a")) {
+                    fileOperations([
+                        fileCopyOperation(
+                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc_d.a"
+                        )
+                    ])
+                }
             }
 
             //
@@ -273,51 +265,30 @@ def inner_pack_macos_ios(platform) {
             ])
 
             //
-            //  Pack Release libraries.
+            //  Pack libraries.
             //
-
-            sh "mkdir -p package/${platform}/lib"
-
             def releaseLibs = ""
-            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
-                releaseLibs += " out/Release/x86/obj/libwebrtc.a"
-            }
-
-            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
-                releaseLibs += " out/Release/x64/obj/libwebrtc.a"
-            }
-
-            if (fileExists('out/Release/arm/obj/libwebrtc.a')) {
-                releaseLibs += " out/Release/arm/obj/libwebrtc.a"
-            }
-
-            if (fileExists('out/Release/arm64/obj/libwebrtc.a')) {
-                releaseLibs += " out/Release/arm64/obj/libwebrtc.a"
-            }
-
-            sh "xcrun lipo -create ${releaseLibs} -output package/${platform}/lib/libwebrtc.a"
-
-            //
-            //  Pack Debug libraries.
-            //
             def debugLibs = ""
-            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
-                debugLibs += " out/Debug/x86/obj/libwebrtc.a"
+
+            ['arm', 'arm64', 'x86', 'x86_64'].each { arch ->
+                if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
+                    releaseLibs += " out/Release/${arch}/obj/libwebrtc.a"
+                }
+
+                if (fileExists("out/Debug/${arch}/obj/libwebrtc.a")) {
+                    debugLibs += " out/Debug/${arch}/obj/libwebrtc.a"
+                }
             }
 
-            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
-                debugLibs += " out/Debug/x64/obj/libwebrtc.a"
+            if (releaseLibs != "")
+                sh "mkdir -p package/${platform}/lib"
+                sh "xcrun lipo -create ${releaseLibs} -output package/${platform}/lib/libwebrtc.a"
             }
 
-            if (fileExists('out/Debug/arm/obj/libwebrtc.a')) {
-                debugLibs += " out/Debug/arm/obj/libwebrtc.a"
+            if (debugLibs != "")
+                sh "mkdir -p package/${platform}/lib"
+                sh "xcrun lipo -create ${debugLibs} -output package/${platform}/lib/libwebrtc_d.a"
             }
-
-            if (fileExists('out/Debug/arm64/obj/libwebrtc.a')) {
-                debugLibs += " out/Debug/arm64/obj/libwebrtc.a"
-            }
-
-            sh "xcrun lipo -create ${debugLibs} -output package/${platform}/lib/libwebrtc_d.a"
 
             //
             //  Acrhive.
@@ -347,67 +318,43 @@ def inner_pack_android(platform) {
                 )
             ])
 
-            //
-            //  Pack Release libraries.
-            //
-            if (fileExists('out/Release/x86/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86
-                    cp out/Release/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc.a
-                """
+            ['arm', 'arm64', 'x86', 'x86_64'].each { arch ->
+                //
+                //  Copy JARs.
+                //
+                fileOperations([
+                    fileCopyOperation(
+                        flattenFiles: true,
+                        includes: "out/Release/${arch}/lib.java/**/*_java.jar",
+                        targetLocation: "package/${platform}/lib/${arch}"
+                    )
+                ])
+
+                //
+                //  Pack Release libraries.
+                //
+                if (fileExists("out/Release/${arch}/obj/libwebrtc.a")) {
+                    fileOperations([
+                        fileCopyOperation(
+                            includes: "out/Release/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc.a"
+                        )
+                    ])
+                }
+
+                //
+                //  Pack Debug libraries.
+                //
+                if (fileExists("out/Debug/${arch}/obj/libwebrtc.a")) {
+                    fileOperations([
+                        fileCopyOperation(
+                            includes: "out/Debug/${arch}/obj/libwebrtc.a",
+                            targetLocation: "package/${platform}/lib/${arch}/libwebrtc_d.a"
+                        )
+                    ])
+                }
             }
 
-            if (fileExists('out/Release/x64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86_64
-                    cp out/Release/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc.a
-                """
-            }
-
-            if (fileExists('out/Release/arm/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/armeabi-v7a
-                    cp out/Release/arm/obj/libwebrtc.a package/${platform}/lib/armeabi-v7a/libwebrtc.a
-                """
-            }
-
-            if (fileExists('out/Release/arm64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/arm64-v8a
-                    cp out/Release/arm64/obj/libwebrtc.a package/${platform}/lib/arm64-v8a/libwebrtc.a
-                """
-            }
-
-            //
-            //  Pack Debug libraries.
-            //
-            if (fileExists('out/Debug/x86/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86
-                    cp out/Debug/x86/obj/libwebrtc.a package/${platform}/lib/x86/libwebrtc_d.a
-                """
-            }
-
-            if (fileExists('out/Debug/x64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/x86_64
-                    cp out/Debug/x64/obj/libwebrtc.a package/${platform}/lib/x86_64/libwebrtc_d.a
-                """
-            }
-
-            if (fileExists('out/Debug/arm/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/armeabi-v7a
-                    cp out/Debug/arm/obj/libwebrtc.a package/${platform}/lib/armeabi-v7a/libwebrtc_d.a
-                """
-            }
-
-            if (fileExists('out/Debug/arm64/obj/libwebrtc.a')) {
-                sh """
-                    mkdir -p package/${platform}/lib/arm64-v8a
-                    cp out/Debug/arm64/obj/libwebrtc.a package/${platform}/lib/arm64-v8a/libwebrtc_d.a
-                """
-            }
 
             //
             //  Acrhive.
