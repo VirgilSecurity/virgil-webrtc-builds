@@ -280,12 +280,12 @@ def inner_pack_macos_ios(platform) {
                 }
             }
 
-            if (releaseLibs != "")
+            if (releaseLibs != "") {
                 sh "mkdir -p package/${platform}/lib"
                 sh "xcrun lipo -create ${releaseLibs} -output package/${platform}/lib/libwebrtc.a"
             }
 
-            if (debugLibs != "")
+            if (debugLibs != "") {
                 sh "mkdir -p package/${platform}/lib"
                 sh "xcrun lipo -create ${debugLibs} -output package/${platform}/lib/libwebrtc_d.a"
             }
