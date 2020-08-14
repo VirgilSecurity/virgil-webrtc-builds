@@ -342,7 +342,6 @@ def inner_pack_android(platform) {
             //
             //  Copy JARs.
             //
-
             def availableArch = ['arm', 'arm64', 'x86', 'x64'].find { arch ->
                 fileExists("out/Release/${arch}/")
             }
@@ -350,9 +349,8 @@ def inner_pack_android(platform) {
             fileOperations([
                 fileCopyOperation(
                     flattenFiles: true,
-                    includes: "out/Release/${availableArch}/lib.java/**/*_java.jar",
+                    includes: "out/Release/${availableArch}/lib.java/sdk/android/libwebrtc.jar",
                     targetLocation: "package/${platform}/jvm/libs",
-                    excludes: "**/errorprone_plugin_java.jar"
                 )
             ])
 
